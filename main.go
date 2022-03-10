@@ -293,12 +293,12 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 			chart.TimeSeries{
 				YAxis:   chart.YAxisSecondary,
 				XValues: xaxis,
-				YValues: yaxisCost,
+				YValues: yaxisConsumption,
 				Style:   chart.Style{StrokeColor: chart.ColorBlue, DotWidth: 3, DotColor: chart.ColorBlue},
 			},
 			chart.TimeSeries{
 				XValues: xaxis,
-				YValues: yaxisConsumption,
+				YValues: yaxisCost,
 				Style:   chart.Style{StrokeColor: chart.ColorRed, DotWidth: 3, DotColor: chart.ColorRed},
 			},
 		},
