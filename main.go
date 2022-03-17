@@ -249,11 +249,16 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 				}
 			}
 		}
+		//log.Println("At: ", c.IntervalStart, " Consumption: ", c.Consumption, " Rate: ", rate, " Cost:", c.Consumption*rate)
 		yaxisConsumption = append(yaxisConsumption, c.Consumption)
 		yaxisCost = append(yaxisCost, c.Consumption*rate)
 		totalCost = totalCost + c.Consumption*rate
 		totalConsumption = totalConsumption + c.Consumption
 	}
+
+	//log.Println("yaxisCost:", yaxisCost)
+	//log.Println("yaxisConsumption:", yaxisConsumption)
+	//log.Println("xaxis:", xaxis)
 
 	text = text + fmt.Sprintf("%.1fkWh (%.1f%%) %02d:%02d to %02d:%02d at %.1fp/kWh \n", totalConsumptionType[0],
 		100.0*totalConsumptionType[0]/totalConsumption,
@@ -283,11 +288,11 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 		},
 		YAxisSecondary: chart.YAxis{
 			Name:      "Consumption kWh (1/2 hour)",
-			NameStyle: chart.Style{FontColor: chart.ColorRed},
+			NameStyle: chart.Style{FontColor: chart.ColorBlue},
 		},
 		YAxis: chart.YAxis{
 			Name:      "Cost p",
-			NameStyle: chart.Style{FontColor: chart.ColorBlue},
+			NameStyle: chart.Style{FontColor: chart.ColorRed},
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
@@ -297,6 +302,7 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 				Style:   chart.Style{StrokeColor: chart.ColorBlue, DotWidth: 3, DotColor: chart.ColorBlue},
 			},
 			chart.TimeSeries{
+				YAxis:   chart.YAxisPrimary,
 				XValues: xaxis,
 				YValues: yaxisCost,
 				Style:   chart.Style{StrokeColor: chart.ColorRed, DotWidth: 3, DotColor: chart.ColorRed},
