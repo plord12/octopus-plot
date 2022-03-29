@@ -60,11 +60,11 @@ func main() {
 	}
 
 	if *dayReport {
-		fromTime, err := time.Parse("2006-01-02T15:04:05Z", *from)
+		fromTime, err := time.Parse(time.RFC3339, *from)
 		if err != nil {
 			log.Fatalf("failed to parse from: %s", err.Error())
 		}
-		toTime, err := time.Parse("2006-01-02T15:04:05Z", *to)
+		toTime, err := time.Parse(time.RFC3339, *to)
 		if err != nil {
 			log.Fatalf("failed to parse to: %s", err.Error())
 		}
@@ -225,7 +225,7 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 	// FIXTHIS:  messy ... avoid fixed length
 	var totalConsumptionType [2]float64
 	for _, c := range consumption.Results {
-		consumptionStart, err := time.Parse("2006-01-02T15:04:05Z", c.IntervalStart)
+		consumptionStart, err := time.Parse(time.RFC3339, c.IntervalStart)
 		xaxis = append(xaxis, consumptionStart)
 		if err != nil {
 			return "", "", errors.New("failed to parse consumption start: " + err.Error())
@@ -376,7 +376,7 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 	totalCost := 0.0
 	totalConsumption := 0.0
 	for _, c := range consumption.Results {
-		consumptionStart, err := time.Parse("2006-01-02T15:04:05Z", c.IntervalStart)
+		consumptionStart, err := time.Parse(time.RFC3339, c.IntervalStart)
 		xaxis = append(xaxis, consumptionStart)
 		if err != nil {
 			return "", "", errors.New("failed to parse consumption start: " + err.Error())
