@@ -230,11 +230,11 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 		if err != nil {
 			return "", "", errors.New("failed to parse consumption start: " + err.Error())
 		}
-		consumptionStartMinutes := consumptionStart.Hour()*60 + consumptionStart.Minute()
+		consumptionStartMinutes := consumptionStart.Local().Hour()*60 + consumptionStart.Local().Minute()
 		rate := 0.0
 		for i, t := range tariffCharge.Results {
-			tariffFromMinutes := t.ValidFrom.Hour()*60 + t.ValidFrom.Minute()
-			tariffToMinutes := t.ValidTo.Hour()*60 + t.ValidTo.Minute()
+			tariffFromMinutes := t.ValidFrom.Local().Hour()*60 + t.ValidFrom.Local().Minute()
+			tariffToMinutes := t.ValidTo.Local().Hour()*60 + t.ValidTo.Local().Minute()
 			if tariffToMinutes > tariffFromMinutes {
 				if consumptionStartMinutes >= tariffFromMinutes && consumptionStartMinutes < tariffToMinutes {
 					rate = t.ValueIncVat
@@ -249,7 +249,7 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 				}
 			}
 		}
-		//log.Println("At: ", c.IntervalStart, " Consumption: ", c.Consumption, " Rate: ", rate, " Cost:", c.Consumption*rate)
+		//log.Println("At: ", c.IntervalStart, " Hour: ", consumptionStart.Local().Hour(), " Consumption: ", c.Consumption, " Rate: ", rate, " Cost:", c.Consumption*rate)
 		yaxisConsumption = append(yaxisConsumption, c.Consumption)
 		yaxisCost = append(yaxisCost, c.Consumption*rate)
 		totalCost = totalCost + c.Consumption*rate
