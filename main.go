@@ -262,13 +262,13 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 
 	text = text + fmt.Sprintf("%.1fkWh (%.1f%%) %02d:%02d to %02d:%02d at %.1fp/kWh \n", totalConsumptionType[0],
 		100.0*totalConsumptionType[0]/totalConsumption,
-		tariffCharge.Results[0].ValidFrom.Hour(), tariffCharge.Results[0].ValidFrom.Minute(),
-		tariffCharge.Results[0].ValidTo.Hour(), tariffCharge.Results[0].ValidTo.Minute(),
+		tariffCharge.Results[0].ValidFrom.Local().Hour(), tariffCharge.Results[0].ValidFrom.Local().Minute(),
+		tariffCharge.Results[0].ValidTo.Local().Hour(), tariffCharge.Results[0].ValidTo.Local().Minute(),
 		tariffCharge.Results[0].ValueIncVat)
 	text = text + fmt.Sprintf("%.1fkWh (%.1f%%) %02d:%02d to %02d:%02d at %.1fp/kWh \n", totalConsumptionType[1],
 		100.0*totalConsumptionType[1]/totalConsumption,
-		tariffCharge.Results[1].ValidFrom.Hour(), tariffCharge.Results[1].ValidFrom.Minute(),
-		tariffCharge.Results[1].ValidTo.Hour(), tariffCharge.Results[1].ValidTo.Minute(),
+		tariffCharge.Results[1].ValidFrom.Local().Hour(), tariffCharge.Results[1].ValidFrom.Local().Minute(),
+		tariffCharge.Results[1].ValidTo.Local().Hour(), tariffCharge.Results[1].ValidTo.Local().Minute(),
 		tariffCharge.Results[1].ValueIncVat)
 	text = text + fmt.Sprintf("Total £%.2f for %.1fkWh, average %.1fp/kWh (inc VAT)\n", totalCost/100, totalConsumption, totalCost/totalConsumption)
 
@@ -381,11 +381,11 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 		if err != nil {
 			return "", "", errors.New("failed to parse consumption start: " + err.Error())
 		}
-		consumptionStartMinutes := consumptionStart.Hour()*60 + consumptionStart.Minute()
+		consumptionStartMinutes := consumptionStart.Local().Hour()*60 + consumptionStart.Local().Minute()
 		rate := 0.0
 		for _, t := range tariffCharge.Results {
-			tariffFromMinutes := t.ValidFrom.Hour()*60 + t.ValidFrom.Minute()
-			tariffToMinutes := t.ValidTo.Hour()*60 + t.ValidTo.Minute()
+			tariffFromMinutes := t.ValidFrom.Local().Hour()*60 + t.ValidFrom.Local().Minute()
+			tariffToMinutes := t.ValidTo.Local().Hour()*60 + t.ValidTo.Local().Minute()
 			if tariffToMinutes > tariffFromMinutes {
 				if consumptionStartMinutes >= tariffFromMinutes && consumptionStartMinutes < tariffToMinutes {
 					rate = t.ValueIncVat
