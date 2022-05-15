@@ -217,6 +217,9 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 	if err != nil {
 		return "", "", errors.New("failed getting consumption: " + err.Error())
 	}
+	if consumption == nil || consumption.Results == nil || len(consumption.Results) == 0 {
+		return "", "", errors.New("no consumption returned")
+	}
 	var xaxis []time.Time
 	var yaxisConsumption []float64
 	var yaxisCost []float64
