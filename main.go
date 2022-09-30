@@ -21,7 +21,6 @@ Plot octpus usage
 
 FIXTHIS: generate email
 FIXTHIS: support longer periods ( cleaner plots )
-
 */
 func main() {
 
@@ -68,65 +67,59 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to parse to: %s", err.Error())
 		}
-		if len(*mpan) == 0 {
-			log.Println("mpan must be provided")
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
-		if len(*mprn) == 0 {
-			log.Println("mprn must be provided")
-			flag.PrintDefaults()
-			os.Exit(1)
-		}
-		if len(*electricitySerial) == 0 {
+		if len(*mpan) > 0 && len(*electricitySerial) == 0 {
 			log.Println("electricitySerial must be provided")
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
-		if len(*gasSerial) == 0 {
+		if len(*mprn) > 0 && len(*gasSerial) == 0 {
 			log.Println("gasSerial must be provided")
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
-		if len(*electricityProductCode) == 0 {
+		if len(*mpan) > 0 && len(*electricityProductCode) == 0 {
 			log.Println("electricityproductcode must be provided")
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
-		if len(*gasProductCode) == 0 {
+		if len(*mprn) > 0 && len(*gasProductCode) == 0 {
 			log.Println("gasproductcode must be provided")
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
 
-		electricityText, electricyImage, err := electricityReport(apiKey, mpan, electricitySerial, electricityProductCode, &fromTime, &toTime)
-		if err != nil {
-			log.Fatalf("Electricity failed: %s", err.Error())
-		}
-		if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
-			cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", electricityText, "-a", electricyImage)
-			stdout, err := cmd.Output()
+		if len(*mpan) > 0 {
+			electricityText, electricyImage, err := electricityReport(apiKey, mpan, electricitySerial, electricityProductCode, &fromTime, &toTime)
 			if err != nil {
-				log.Println(err.Error())
+				log.Fatalf("Electricity failed: %s", err.Error())
 			}
-			log.Println(string(stdout))
+			if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
+				cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", electricityText, "-a", electricyImage)
+				stdout, err := cmd.Output()
+				if err != nil {
+					log.Println(err.Error())
+				}
+				log.Println(string(stdout))
+			}
+			log.Println(electricityText + electricyImage)
+			os.Remove(electricyImage)
 		}
-		log.Println(electricityText + electricyImage)
-		os.Remove(electricyImage)
 
-		gasText, gasImage, err := gasReport(apiKey, mprn, gasSerial, gasProductCode, &fromTime, &toTime)
-		if err != nil {
-			log.Fatalf("Gas failed: %s", err.Error())
-		}
-		if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
-			cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", gasText, "-a", gasImage)
-			stdout, err := cmd.Output()
+		if len(*mprn) > 0 {
+			gasText, gasImage, err := gasReport(apiKey, mprn, gasSerial, gasProductCode, &fromTime, &toTime)
 			if err != nil {
-				log.Println(err.Error())
+				log.Fatalf("Gas failed: %s", err.Error())
 			}
-			log.Println(string(stdout))
+			if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
+				cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", gasText, "-a", gasImage)
+				stdout, err := cmd.Output()
+				if err != nil {
+					log.Println(err.Error())
+				}
+				log.Println(string(stdout))
+			}
+			os.Remove(gasImage)
 		}
-		os.Remove(gasImage)
 
 	}
 }
@@ -325,7 +318,7 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 
 func gasReport(apiKey *string, mprn *string, serialno *string, productCode *string, from *time.Time, to *time.Time) (string, string, error) {
 
-	text := "Gas\n"
+	text := "Gas: "
 
 	tariffCode := "G-1R-" + *productCode + "-H"
 
@@ -378,6 +371,7 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 	var yaxisCost []float64
 	totalCost := 0.0
 	totalConsumption := 0.0
+	rate := 0.0
 	for _, c := range consumption.Results {
 		consumptionStart, err := time.Parse(time.RFC3339, c.IntervalStart)
 		xaxis = append(xaxis, consumptionStart)
@@ -385,7 +379,7 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 			return "", "", errors.New("failed to parse consumption start: " + err.Error())
 		}
 		consumptionStartMinutes := consumptionStart.Local().Hour()*60 + consumptionStart.Local().Minute()
-		rate := 0.0
+		rate = 0.0
 		for _, t := range tariffCharge.Results {
 			tariffFromMinutes := t.ValidFrom.Local().Hour()*60 + t.ValidFrom.Local().Minute()
 			tariffToMinutes := t.ValidTo.Local().Hour()*60 + t.ValidTo.Local().Minute()
@@ -405,9 +399,10 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 		yaxisCost = append(yaxisCost, c.Consumption*rate)
 		totalCost = totalCost + c.Consumption*rate
 		totalConsumption = totalConsumption + c.Consumption
+		//log.Println("At: ", c.IntervalStart, " Consumption: ", c.Consumption, " Rate: ", rate, " Cost:", c.Consumption*rate, " Total cost:", totalCost)
 	}
 
-	text = text + fmt.Sprintf("Total £%.2f for %.1fkWh (inc VAT)\n", totalCost/100, totalConsumption)
+	text = text + fmt.Sprintf("Total £%.2f for %.1fkWh at %.1fp/kWh (inc VAT)\n", totalCost/100, totalConsumption, rate)
 
 	// chart
 	//
@@ -435,12 +430,12 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 			chart.TimeSeries{
 				YAxis:   chart.YAxisSecondary,
 				XValues: xaxis,
-				YValues: yaxisCost,
+				YValues: yaxisConsumption,
 				Style:   chart.Style{StrokeColor: chart.ColorBlue, DotWidth: 3, DotColor: chart.ColorBlue},
 			},
 			chart.TimeSeries{
 				XValues: xaxis,
-				YValues: yaxisConsumption,
+				YValues: yaxisCost,
 				Style:   chart.Style{StrokeColor: chart.ColorRed, DotWidth: 3, DotColor: chart.ColorRed},
 			},
 		},
