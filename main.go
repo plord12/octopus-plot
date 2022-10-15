@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -285,10 +286,12 @@ func electricityReport(apiKey *string, mpan *string, serialno *string, productCo
 		YAxisSecondary: chart.YAxis{
 			Name:      "Consumption kWh (1/2 hour)",
 			NameStyle: chart.Style{FontColor: chart.ColorBlue},
+			Range:     &chart.ContinuousRange{Min: 0, Max: getMax(yaxisConsumption)},
 		},
 		YAxis: chart.YAxis{
 			Name:      "Cost p",
 			NameStyle: chart.Style{FontColor: chart.ColorRed},
+			Range:     &chart.ContinuousRange{Min: 0, Max: getMax(yaxisCost)},
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
@@ -371,6 +374,7 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 	var yaxisCost []float64
 	totalCost := 0.0
 	totalConsumption := 0.0
+	totalkwhConsumption := 0.0
 	rate := 0.0
 	for _, c := range consumption.Results {
 		consumptionStart, err := time.Parse(time.RFC3339, c.IntervalStart)
@@ -395,14 +399,16 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 				}
 			}
 		}
-		yaxisConsumption = append(yaxisConsumption, c.Consumption)
-		yaxisCost = append(yaxisCost, c.Consumption*rate)
-		totalCost = totalCost + c.Consumption*rate
+		kwhConsumption := c.Consumption * 1.02264 * 39.0 / 3.6
+		yaxisConsumption = append(yaxisConsumption, kwhConsumption)
+		yaxisCost = append(yaxisCost, kwhConsumption*rate)
+		totalCost = totalCost + kwhConsumption*rate
 		totalConsumption = totalConsumption + c.Consumption
+		totalkwhConsumption = totalkwhConsumption + kwhConsumption
 		//log.Println("At: ", c.IntervalStart, " Consumption: ", c.Consumption, " Rate: ", rate, " Cost:", c.Consumption*rate, " Total cost:", totalCost)
 	}
 
-	text = text + fmt.Sprintf("Total £%.2f for %.1fkWh at %.1fp/kWh (inc VAT)\n", totalCost/100, totalConsumption, rate)
+	text = text + fmt.Sprintf("Total £%.2f for %.1fm3 (%.1fkWh) at %.1fp/kWh (inc VAT)\n", totalCost/100, totalConsumption, totalkwhConsumption, rate)
 
 	// chart
 	//
@@ -421,10 +427,12 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 		YAxisSecondary: chart.YAxis{
 			Name:      "Consumption kWh (1/2 hour)",
 			NameStyle: chart.Style{FontColor: chart.ColorRed},
+			Range:     &chart.ContinuousRange{Min: 0, Max: getMax(yaxisConsumption)},
 		},
 		YAxis: chart.YAxis{
 			Name:      "Cost p",
 			NameStyle: chart.Style{FontColor: chart.ColorBlue},
+			Range:     &chart.ContinuousRange{Min: 0, Max: getMax(yaxisCost)},
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
@@ -449,4 +457,19 @@ func gasReport(apiKey *string, mprn *string, serialno *string, productCode *stri
 	}
 
 	return text, f.Name(), nil
+}
+
+func getMax(arr []float64) float64 {
+	var i int
+	var max float64
+
+	max = math.SmallestNonzeroFloat64
+
+	for i = 0; i < len(arr); i++ {
+		if arr[i] > max {
+			max = arr[i]
+		}
+	}
+
+	return max
 }
