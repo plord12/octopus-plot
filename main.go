@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/danopstech/octopusenergy"
@@ -44,6 +45,7 @@ func main() {
 	from := flag.String("from", defaultFrom.Format("2006-01-02T15:04:05Z"), "Report start date/time")
 	to := flag.String("to", defaultTo.Format("2006-01-02T15:04:05Z"), "Report end date/time")
 	signalUser := flag.String("signaluser", "", "Signal messenger username")
+	signalGroup := flag.String("signalgroup", "", "Signal messenger group id")
 	signalRecipient := flag.String("signalrecipient", "", "Signal messenger recipient")
 
 	flag.Parse()
@@ -94,14 +96,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("Electricity failed: %s", err.Error())
 			}
-			if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
-				cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", electricityText, "-a", electricyImage)
-				stdout, err := cmd.Output()
-				if err != nil {
-					log.Println(err.Error())
-				}
-				log.Println(string(stdout))
-			}
+			alert(signalUser, signalRecipient, signalGroup, electricityText, []string{electricyImage})
 			log.Println(electricityText + electricyImage)
 			os.Remove(electricyImage)
 		}
@@ -111,18 +106,54 @@ func main() {
 			if err != nil {
 				log.Fatalf("Gas failed: %s", err.Error())
 			}
-			if len(*signalUser) > 0 && len(*signalRecipient) > 0 {
-				cmd := exec.Command("signal-cli", "-u", *signalUser, "send", *signalRecipient, "-m", gasText, "-a", gasImage)
-				stdout, err := cmd.Output()
-				if err != nil {
-					log.Println(err.Error())
-				}
-				log.Println(string(stdout))
-			}
+			alert(signalUser, signalRecipient, signalGroup, gasText, []string{gasImage})
 			os.Remove(gasImage)
 		}
 
 	}
+}
+
+// send an alert via signal
+func alert(signalUser *string, signalRecipient *string, signalGroup *string, message string, attachments []string) error {
+	if (len(*signalUser) > 0) && (len(*signalGroup) > 0 || len(*signalRecipient) > 0) {
+
+		// keep signal happy
+		//
+		cmd := exec.Command("signal-cli", "-u", *signalUser, "receive")
+		stdout, err := cmd.CombinedOutput()
+		if err != nil {
+			return errors.New("signal-cli failed - " + string(stdout))
+		}
+		//log.Println(string(stdout[:]))
+
+		var args []string
+		args = append(args, "-u")
+		args = append(args, *signalUser)
+		args = append(args, "send")
+		if len(*signalGroup) > 0 {
+			args = append(args, "-g")
+			args = append(args, *signalGroup)
+		} else {
+			args = append(args, strings.Split(*signalRecipient, " ")...)
+		}
+		if len(message) > 0 {
+			args = append(args, "-m")
+			args = append(args, message)
+		}
+		if len(attachments) > 0 {
+			args = append(args, "-a")
+			args = append(args, attachments...)
+		}
+		log.Printf("signal-cli %v\n", args)
+		cmd = exec.Command("signal-cli", args...)
+
+		stdout, err = cmd.CombinedOutput()
+		if err != nil {
+			return errors.New("signal-cli failed - " + string(stdout))
+		}
+	}
+
+	return nil
 }
 
 func listProducts(apiKey *string) {
